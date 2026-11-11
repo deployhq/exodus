@@ -1,6 +1,9 @@
 ---
 import Seo from '../components/Seo.astro';
 import UrlForm from '../components/UrlForm.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+import '../styles/brand.css';
 
 const title = 'WordPress to Astro in minutes | Exodus by DeployHQ';
 const description =
@@ -17,6 +20,7 @@ const description =
 		<Seo title={title} description={description} path="/" />
 	</head>
 	<body>
+		<SiteHeader />
 		<main>
 			<section class="hero" id="preview">
 				<h1>See your WordPress site running on Astro in minutes.</h1>
@@ -28,7 +32,7 @@ const description =
 				<p class="microcopy">Free. Takes a few minutes. Your WordPress site isn't touched.</p>
 			</section>
 
-			<section>
+			<section class="problem">
 				<h2>The problem</h2>
 				<p>
 					Updates, plugin conflicts, security patches, and a server to keep it all alive, for a site
@@ -38,9 +42,9 @@ const description =
 				</p>
 			</section>
 
-			<section>
+			<section id="how">
 				<h2>How it works</h2>
-				<ol>
+				<ol class="steps">
 					<li>
 						<strong>Paste your URL.</strong> Exodus reads your public site: pages, posts, images and
 						metadata. Nothing gets installed on WordPress.
@@ -56,11 +60,11 @@ const description =
 				<p><a class="cta" href="#preview">Build my preview</a></p>
 			</section>
 
-			<section>
+			<section id="what">
 				<h2>What converts, and what doesn't</h2>
-				<ul>
-					<li><strong>Converts:</strong> pages, posts, images, menus, metadata.</li>
-					<li>
+				<ul class="converts">
+					<li class="ok"><strong>Converts:</strong> pages, posts, images, menus, metadata.</li>
+					<li class="flag">
 						<strong>Needs a replacement:</strong> forms, site search, comments, WooCommerce,
 						memberships and plugin-driven features.
 					</li>
@@ -68,16 +72,16 @@ const description =
 				<p>Exodus lists what it found, so you know before you commit to anything.</p>
 			</section>
 
-			<section>
+			<section id="why">
 				<h2>Why Astro</h2>
-				<ul>
+				<ul class="ticks">
 					<li>Static HTML: no PHP and no database, so there's nothing to patch.</li>
 					<li>JavaScript only where a page needs it, which usually means faster pages.</li>
 					<li>Content lives as files, so people and AI coding agents can edit it.</li>
 				</ul>
 			</section>
 
-			<section>
+			<section class="callout">
 				<h2>This is a preview, not a migration</h2>
 				<p>Your WordPress site stays exactly as it is.</p>
 			</section>
@@ -87,142 +91,6 @@ const description =
 				<UrlForm id="url-closing" />
 			</section>
 		</main>
+		<SiteFooter />
 	</body>
 </html>
-
-<style is:global>
-	:root {
-		color-scheme: light dark;
-		--bg: #ffffff;
-		--fg: #1a1a1a;
-		--muted: #5b5b5b;
-		--accent: #5b3df5;
-		--accent-fg: #ffffff;
-		--border: #d4d4d8;
-	}
-
-	@media (prefers-color-scheme: dark) {
-		:root {
-			--bg: #101014;
-			--fg: #f2f2f4;
-			--muted: #a1a1aa;
-			--accent: #8b74ff;
-			--accent-fg: #101014;
-			--border: #3a3a44;
-		}
-	}
-
-	* {
-		box-sizing: border-box;
-	}
-
-	body {
-		margin: 0;
-		background: var(--bg);
-		color: var(--fg);
-		font: 1.0625rem/1.6 system-ui, -apple-system, 'Segoe UI', sans-serif;
-	}
-
-	main {
-		max-width: 44rem;
-		margin: 0 auto;
-		padding: 0 1rem 4rem;
-	}
-
-	section {
-		padding: 2.5rem 0 0;
-	}
-
-	.hero {
-		padding-top: 4rem;
-	}
-
-	h1 {
-		font-size: clamp(2rem, 6vw, 3rem);
-		line-height: 1.15;
-		margin: 0 0 1rem;
-	}
-
-	h2 {
-		font-size: 1.5rem;
-		line-height: 1.25;
-		margin: 0 0 0.75rem;
-	}
-
-	.subhead {
-		font-size: 1.25rem;
-		color: var(--muted);
-		margin: 0 0 1.5rem;
-	}
-
-	.microcopy {
-		font-size: 0.9375rem;
-		color: var(--muted);
-		margin: 0.75rem 0 0;
-	}
-
-	.url-form {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem;
-	}
-
-	.url-form input {
-		flex: 1 1 16rem;
-		min-width: 0;
-		padding: 0.75rem 1rem;
-		font: inherit;
-		color: inherit;
-		background: transparent;
-		border: 1px solid var(--border);
-		border-radius: 0.5rem;
-	}
-
-	.url-form input[aria-invalid='true'] {
-		border-color: #dc2626;
-	}
-
-	.url-form button,
-	.cta {
-		padding: 0.75rem 1.25rem;
-		font: inherit;
-		font-weight: 600;
-		color: var(--accent-fg);
-		background: var(--accent);
-		border: 0;
-		border-radius: 0.5rem;
-		cursor: pointer;
-		text-decoration: none;
-		display: inline-block;
-	}
-
-	.url-form button:hover,
-	.cta:hover {
-		filter: brightness(1.1);
-	}
-
-	:focus-visible {
-		outline: 3px solid var(--accent);
-		outline-offset: 2px;
-	}
-
-	.url-form-status {
-		flex-basis: 100%;
-		margin: 0;
-		font-size: 0.9375rem;
-	}
-
-	.visually-hidden {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		margin: -1px;
-		overflow: hidden;
-		clip: rect(0 0 0 0);
-		white-space: nowrap;
-	}
-
-	li {
-		margin-bottom: 0.5rem;
-	}
-</style>
