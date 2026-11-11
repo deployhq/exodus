@@ -25,15 +25,14 @@ Agencies and freelancers running many WordPress sites pay the "WordPress tax": s
   - `slug.ts` turns the URL into the site name.
 - **API (the UI calls only this):** `POST /api/jobs` `{url}` returns an id. `GET /api/jobs/[id]` returns the job, for polling. `GET /api/jobs/[id]/events` streams the job over SSE. Each step has a `phase` (`content`, `astro`, `deploy`) for the stepper. The full contract and snippets are in `docs/MIGRATION-SERVICE.md`.
 - **Naming:** `https://websitedemos.net/agency-02/` gives slug `websitedemos-agency-02`. The site is then `websitedemos-agency-02-staging.deployhq-sites.com`, with optional custom domain `websitedemos-agency-02.dropsite.dev`. The GitHub repo is `<GITHUB_OWNER>/exodus-<slug>` (private).
-- UI: a single page with a URL input, a stepper with live progress, and a result page with the staging link, a before/after comparison (page weight, load time, plugins removed) and a "claim this site" call to action.
-- Planned (see "Account creation", not built yet): `src/lib/pipeline.ts`: `translate(url)` then `publish(sourceDir)` (push to git), then a pause for the visitor to create their DeployHQ account, then `deploy(repoUrl, credentials)` (DeployHQ project, repository, static_hosting server, deployment) then staging URL. Emits progress events. The translator and the deployer sit behind small interfaces, with mock implementations until the real ones are plugged in.; `src/lib/deployhq.ts`: client for the DeployHQ staging API. It acts as the visitor's own account, using the credentials returned by signup. Any Exodus-level credentials (bot, git host) come from env vars only, never committed.; UI: a single page with a URL input, a stepper with live progress (pausing at the account step), and a result page with the staging link and a before/after comparison (page weight, load time, plugins removed).
+- UI (built part): a single page with a URL input and a stepper with live progress. Still to build: the account step, and a result page with the staging link and a before/after comparison (page weight, load time, plugins removed).
+- **Planned, not built** (see "Account creation"): after the translation and publish steps, the pipeline pauses for the visitor to create their DeployHQ account, then deploys as that account. `deployhq.ts` then acts as the visitor's own account, using the credentials returned by signup, instead of a shared staging account. Any Exodus-level credentials (bot, git host) come from env vars only, never committed.
 
 ## Guardrails (required, public tool)
 
 - SSRF protection: only http(s); resolve the host and block private, loopback and link-local addresses, including after redirects.
 - Rate limit per IP and a cap on concurrent jobs.
 - Check that the target is really WordPress (e.g. `/wp-json/`) before running the pipeline.
-- Staging sites are temporary; claiming one is the conversion step.
 - **Status for the hackathon demo:**
   - Done: the engine's host allowlist (`WP_STATIC_ALLOW_HOSTS`, which is stricter than SSRF filtering), one job at a time, and the `/wp-json/` check.
   - Not done: SSRF filtering of arbitrary hosts and per-IP rate limits. Both are needed before this is public.
@@ -95,7 +94,7 @@ Source: `exodus-landing-copy.md` (internal marketing draft, 2026-11-11, outside 
 
 - ~~Translator package~~: decided. `hackathon-wp-static`, installed from GitHub and run as a child process (see Architecture).
 - Git host: for the demo, one private repo per site under `GITHUB_OWNER`, using a personal `gh` token. Still open: a bot credential, a dedicated org and a cleanup policy.
-- ~~Staging account~~: decided. `thiago-qa` on staging; credentials in a local `.env` only (ask Thiago).
+- Staging account: for the hackathon demo, `thiago-qa` on staging, with credentials in a local `.env` only (ask Thiago). The planned flow replaces it with accounts created for visitors (see "Account creation").
 - Ownership proof (DNS TXT or meta tag) before a preview is publicly reachable, versus only the WordPress check. Decide before launch.
 - Preview hardening: `noindex`, unlisted, short-lived, "preview, not the original site" banner. Needs the expiry value and a place to apply it (translator output or hosting).
 - FAQ answers (cost, client sites, Elementor/Divi, SEO) and a GA4 measurement ID.
