@@ -117,10 +117,28 @@ To build:
 
 Also missing: the **old-to-new URL map and redirects**. The site keeps the original's paths today. Redirects need the Static Hosting redirects feature, and the WordPress REST API (`/wp-json/wp/v2/pages|posts`) gives the full page inventory to check against the crawl.
 
-## Known issue: redirect "flash" on demo sites
-- **The root redirect page:** a site that lived under a subpath (`/agency-02/`) is published as-is, so `publish.ts` writes a meta-refresh page at `/`, which the visitor sees as a flash.
+## Fixed: redirect "flash" on demo sites
+- **The root redirect page:** a site that lived under a subpath (`/agency-02/`) used to be published as-is, so `publish.ts` wrote a meta-refresh page at `/`, which the visitor saw as a flash.
 - **The trailing-slash redirect:** Static Hosting 301s every URL that ends in `/` to the same URL without the slash, adding `?__dhq_hops=1`. That's its loop guard, documented in the deployhq-sites repo, `docs/architecture.md`. WordPress links all end in `/`.
-- **Fix on our side:** have the translator emit the site at `/` and write internal links without a trailing slash.
+- **Fixed:** the engine runner sets `WP_STATIC_TRANSLATE_ROOT=1` by default, so the translator emits the site at `/` and writes internal links without a trailing slash. Set it to `0` to keep the original base path, which brings both problems back.
+
+## Known limit: interactive Elementor widgets (AddSearch attempt, 2026-11-11)
+- **Tried:** AddSearch (Elementor, 547 pages), our real-brand test.
+- **How far we got:**
+  - The home page passes as an exact copy.
+  - The Astro translation passes 10 of 40 sampled pages.
+  - A local run of the landing plus 7 nav pages built in 4m22s, with every page returning 200 and its original title, and a static layout close to the original.
+  - It was not published: the staging account is at its 3-site Static Hosting limit.
+- **Why it fell short:**
+  - The translator keeps only scripts that change what renders on load, so Elementor's runtime and jQuery are dropped (54 scripts down to 9). Accordions, tabs and toggles don't respond.
+  - Only menus, FAQ disclosures, table of contents, carousel layout and entrance animations have Astro replacements.
+  - The verifier compares screenshots and never clicks, so it didn't catch this.
+  - Also: the hero video timed out, the theme's fonts came from a host that returned 401, and the quality gate fails 10 checks.
+- **To close it:**
+  1. Ship Elementor's runtime on pages whose interactive widgets have no replacement.
+  2. Convert the common widgets properly.
+  3. Add click-through checks to the verifier.
+- **Full write-up:** the engine repo's `docs/HOW-IT-WORKS.md`, section "AddSearch".
 
 ## Verification is off by default (EXODUS_VERIFY)
 
