@@ -51,11 +51,27 @@ Agencies and freelancers running many WordPress sites pay the "WordPress tax": s
 - **We push the built `dist/` and deploy it without build commands.** Nobody has checked whether the staging build servers have the Node version Astro 7 needs (22.23.4 or newer). Switching to `run_build_commands` (with `POST /detection` for the commands) is a follow-up.
 - Re-running the same URL reuses its repo, project and site and just redeploys. That matters because Static Hosting caps sites per account.
 
+## Landing page copy rules
+
+Source: `exodus-landing-copy.md` (internal marketing draft, 2026-11-11, outside this repo). Rules that apply to anything user-facing here:
+
+- Do NOT claim custom domains, redirects, form handling, or "go live on your own domain" until they ship. This also means the result page must not offer a custom-domain step yet; "claim" leads to signup only.
+- Do not publish unverified claims. The draft marks them **[verify]**; they are left out of the page until confirmed: same URLs, optimized images, repo export, `noindex`/unlisted previews, preview expiry (`[X days]`), read-only crawl guarantee.
+- Do not name or quote the author of the reference tweet in public copy.
+- Tone: second person, semi-formal, contractions OK. Avoid "simply", "just", "easy", "seamless", "leverage", "robust".
+- GA4 events: `exodus_url_submitted`, `exodus_preview_ready`, `exodus_preview_opened`, `exodus_preview_shared`, `exodus_signup_clicked`. Only the first is wired (in `UrlForm.astro`, via `window.gtag`).
+- `FAQPage` structured data only if the FAQ is visible with answers (the FAQ is not on the page yet). No `llms.txt` or AI-specific markup.
+- The public name "Exodus" is a working name; the title should keep "WordPress to Astro" for SEO.
+
 ## Open items (blocked on the team)
 
 - ~~Translator package~~: decided. `hackathon-wp-static`, installed from GitHub and run as a child process (see Architecture).
 - Git host: for the demo, one private repo per site under `GITHUB_OWNER`, using a personal `gh` token. Still open: a bot credential, a dedicated org and a cleanup policy.
 - ~~Staging account~~: decided. `thiago-qa` on staging; credentials in a local `.env` only (ask Thiago).
+- Ownership proof (DNS TXT or meta tag) before a preview is publicly reachable, versus only the WordPress check. Decide before launch.
+- Preview hardening: `noindex`, unlisted, short-lived, "preview, not the original site" banner. Needs the expiry value and a place to apply it (translator output or hosting).
+- FAQ answers (cost, client sites, Elementor/Divi, SEO) and a GA4 measurement ID.
+- Canonical URL and final domain for this site (the draft's `www.deployhq.com` convention applies to the marketing site, not necessarily to this app).
 - Staging site lifetime and how a "claim" hands the project over to a user's DeployHQ account.
 
 ## Planned, not built: the "what didn't migrate" report
