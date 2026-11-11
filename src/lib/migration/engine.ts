@@ -111,6 +111,10 @@ export async function runEngine(opts: EngineOptions): Promise<EngineResult> {
   if (path.basename(path.dirname(dir)) === 'node_modules') binDirs.push(path.join(dir, '..', '.bin'));
   const env: NodeJS.ProcessEnv = { ...process.env, PATH: [...binDirs, process.env.PATH || ''].join(path.delimiter) };
   if (process.env.WP_STATIC_ALLOW_HOSTS) env.WP_STATIC_ALLOW_HOSTS = process.env.WP_STATIC_ALLOW_HOSTS;
+  // Each migrated site gets its own (sub)domain, so host it at "/" with slash-less page links.
+  // That avoids a redirect page at "/" and Static Hosting's trailing-slash 301 (?__dhq_hops=1).
+  // Set WP_STATIC_TRANSLATE_ROOT=0 to keep the original base path.
+  env.WP_STATIC_TRANSLATE_ROOT = process.env.WP_STATIC_TRANSLATE_ROOT ?? '1';
 
   log(`engine: ${process.execPath} ${args.join(' ')}`);
   const spawnedAt = Date.now();

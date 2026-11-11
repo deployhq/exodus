@@ -16,6 +16,6 @@
   "dependencies": {
     "@astrojs/node": "^11.1.12",
     "astro": "^7.4.10",
-    "hackathon-wp-static": "github:deployhq/hackathon-wp-static#898403916efa6e6b2428624ec5b7ad95a550b400"
+    "hackathon-wp-static": "github:deployhq/hackathon-wp-static#f2dfbf4b"
   }
 }
