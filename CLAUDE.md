@@ -26,14 +26,16 @@ Agencies and freelancers running many WordPress sites pay the "WordPress tax": s
 - **API (the UI calls only this):** `POST /api/jobs` `{url}` returns an id. `GET /api/jobs/[id]` returns the job, for polling. `GET /api/jobs/[id]/events` streams the job over SSE. Each step has a `phase` (`content`, `astro`, `deploy`) for the stepper. The full contract and snippets are in `docs/MIGRATION-SERVICE.md`.
 - **Naming:** `https://websitedemos.net/agency-02/` gives slug `websitedemos-agency-02`. The site is then `websitedemos-agency-02-staging.deployhq-sites.com`, with optional custom domain `websitedemos-agency-02.dropsite.dev`. The GitHub repo is `<GITHUB_OWNER>/exodus-<slug>` (private).
 - UI: a single page with a URL input, a stepper with live progress, and a result page with the staging link, a before/after comparison (page weight, load time, plugins removed) and a "claim this site" call to action.
-- Planned (see "Account creation", not built yet): `src/lib/pipeline.ts`: `translate(url)` then `publish(sourceDir)` (push to git), then a pause for the visitor to create their DeployHQ account, then `deploy(repoUrl, credentials)` (DeployHQ project, repository, static_hosting server, deployment) then staging URL. Emits progress events. The translator and the deployer sit behind small interfaces, with mock implementations until the real ones are plugged in.; `src/lib/deployhq.ts`: client for the DeployHQ staging API. It acts as the visitor's own account, using the credentials returned by signup. Any Exodus-level credentials (bot, git host) come from env vars only, never committed.; UI: a single page with a URL input, a stepper with live progress (pausing at the account step), and a result page with the staging link and a before/after comparison (page weight, load time, plugins removed).
+- **Planned (see "Account creation", not built yet):**
+  - After `publish`, the pipeline pauses for the visitor to create their DeployHQ account. Then `deploy(repoUrl, credentials)` runs as the visitor's own account, using the credentials returned by signup, instead of the demo's shared `thiago-qa` key.
+  - The stepper then pauses at the account step.
+  - Any Exodus-level credentials (bot, git host) come from env vars only, never committed.
 
 ## Guardrails (required, public tool)
 
 - SSRF protection: only http(s); resolve the host and block private, loopback and link-local addresses, including after redirects.
 - Rate limit per IP and a cap on concurrent jobs.
 - Check that the target is really WordPress (e.g. `/wp-json/`) before running the pipeline.
-- Staging sites are temporary; claiming one is the conversion step.
 - **Status for the hackathon demo:**
   - Done: the engine's host allowlist (`WP_STATIC_ALLOW_HOSTS`, which is stricter than SSRF filtering), one job at a time, and the `/wp-json/` check.
   - Not done: SSRF filtering of arbitrary hosts and per-IP rate limits. Both are needed before this is public.
@@ -91,6 +93,25 @@ Source: `exodus-landing-copy.md` (internal marketing draft, 2026-11-11, outside 
 - `/sitemap.xml` lists indexable pages only: add new public pages to `paths` in `src/pages/sitemap.xml.ts`. `robots.txt` disallows `/api/`.
 - Generated preview sites must never be indexed. `src/lib/seo/noindex.ts` provides `injectNoindex(html)` and `PREVIEW_ROBOTS_TXT`. **Not wired in yet**: the publish step must apply both to the generated site's files before the git push (inject into every HTML file, write `robots.txt` at the site root). Tests: `node --test test/noindex.test.ts`.
 
+## Landing page copy rules
+
+Source: `exodus-landing-copy.md` (internal marketing draft, 2026-11-11, outside this repo). Rules that apply to anything user-facing here:
+
+- Do NOT claim custom domains, redirects, form handling, or "go live on your own domain" until they ship. This also means the result page must not offer a custom-domain step yet.
+- Do not publish unverified claims. The draft marks them **[verify]**; they are left out of the page until confirmed: same URLs, optimized images, repo export, `noindex`/unlisted previews, preview expiry (`[X days]`), read-only crawl guarantee.
+- Do not name or quote the author of the reference tweet in public copy.
+- Tone: second person, semi-formal, contractions OK. Avoid "simply", "just", "easy", "seamless", "leverage", "robust".
+- GA4 events: `exodus_url_submitted`, `exodus_preview_ready`, `exodus_preview_opened`, `exodus_preview_shared`, `exodus_signup_clicked`. Only the first is wired (in `UrlForm.astro`, via `window.gtag`).
+- `FAQPage` structured data only if the FAQ is visible with answers (the FAQ is not on the page yet). No `llms.txt` or AI-specific markup.
+- The public name "Exodus" is a working name; the title should keep "WordPress to Astro" for SEO.
+
+## SEO
+
+- `src/components/Seo.astro` renders title, description, robots, canonical and Open Graph/Twitter tags. Every page uses it; pass `noindex` for anything that isn't the landing page.
+- Canonical URLs, `robots.txt` and `sitemap.xml` need `SITE_URL` (public origin) at build time. Without it, canonical and sitemap entries are omitted.
+- `/sitemap.xml` lists indexable pages only: add new public pages to `paths` in `src/pages/sitemap.xml.ts`. `robots.txt` disallows `/api/`.
+- Generated preview sites must never be indexed. `src/lib/seo/noindex.ts` provides `injectNoindex(html)` and `PREVIEW_ROBOTS_TXT`. **Not wired in yet**: the publish step must apply both to the generated site's files before the git push (inject into every HTML file, write `robots.txt` at the site root). Tests: `node --test test/noindex.test.ts`.
+
 ## Open items (blocked on the team)
 
 - ~~Translator package~~: decided. `hackathon-wp-static`, installed from GitHub and run as a child process (see Architecture).
@@ -118,10 +139,10 @@ To build:
 
 Also missing: the **old-to-new URL map and redirects**. The site keeps the original's paths today. Redirects need the Static Hosting redirects feature, and the WordPress REST API (`/wp-json/wp/v2/pages|posts`) gives the full page inventory to check against the crawl.
 
-## Known issue: redirect "flash" on demo sites
-- **The root redirect page:** a site that lived under a subpath (`/agency-02/`) is published as-is, so `publish.ts` writes a meta-refresh page at `/`, which the visitor sees as a flash.
+## Fixed: redirect "flash" on demo sites
+- **The root redirect page:** a site that lived under a subpath (`/agency-02/`) used to be published as-is, so `publish.ts` wrote a meta-refresh page at `/`, which the visitor saw as a flash.
 - **The trailing-slash redirect:** Static Hosting 301s every URL that ends in `/` to the same URL without the slash, adding `?__dhq_hops=1`. That's its loop guard, documented in the deployhq-sites repo, `docs/architecture.md`. WordPress links all end in `/`.
-- **Fix on our side:** have the translator emit the site at `/` and write internal links without a trailing slash.
+- **Fixed:** the engine runner sets `WP_STATIC_TRANSLATE_ROOT=1` by default, so the translator emits the site at `/` and writes internal links without a trailing slash. Set it to `0` to keep the original base path, which brings both problems back.
 
 ## Verification is off by default (EXODUS_VERIFY)
 
