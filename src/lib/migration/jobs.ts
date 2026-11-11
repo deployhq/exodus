@@ -25,6 +25,10 @@ export interface JobResult {
   customDomainUrl: string | null;
   repoUrl: string;
   projectUrl: string;
+  /** "v001" for a versioned run, null with EXODUS_VERSIONED=0. */
+  version: string | null;
+  /** Name used for the repo/project/site suffix, e.g. "plumber-02-v001". */
+  name: string;
   reports: Record<string, string | null>;
 }
 

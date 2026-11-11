@@ -20,6 +20,37 @@ export interface PublishResult {
   liveUrl: string;
   customDomainUrl: string | null;
   warnings: string[];
+  /** "v001" in versioned mode (the default), null with EXODUS_VERSIONED=0. */
+  version: string | null;
+  /** The name used for the subdomain: "<slug>-v001", or the bare slug when not versioned. */
+  name: string;
+}
+
+/** Same cap slug.ts enforces on a slug (MAX = 40), so a versioned name is never longer than a bare one. */
+const NAME_MAX = 40;
+
+export function versioningEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  return (env.EXODUS_VERSIONED ?? '1').trim() !== '0';
+}
+
+/** Next free version number for `slug`, given existing DeployHQ project names (max+1, starting at 1). */
+export function nextVersion(slug: string, projectNames: string[]): number {
+  const esc = slug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`^exodus-${esc}-v(\\d{3})$`);
+  let max = 0;
+  for (const n of projectNames) {
+    const m = re.exec(n);
+    if (m) max = Math.max(max, Number(m[1]));
+  }
+  return max + 1;
+}
+
+/** "<slug>-vNNN", trimming the slug (never the version) to stay within NAME_MAX. */
+export function versionedName(slug: string, n: number): { version: string; name: string } {
+  const version = `v${String(n).padStart(3, '0')}`;
+  const room = NAME_MAX - version.length - 1;
+  const base = slug.length > room ? slug.slice(0, room).replace(/-+$/g, '') : slug;
+  return { version, name: `${base}-${version}` };
 }
 
 const EXCLUDE = new Set(['node_modules', 'dist', '.astro', '.git']);
@@ -93,14 +124,25 @@ async function createServer(cfg: DhqConfig, p: string, body: unknown, log: Publi
 
 export async function publish(opts: PublishOptions): Promise<PublishResult> {
   try { process.loadEnvFile?.('.env'); } catch { /* no .env: rely on the environment */ }
-  const { slug, log } = opts;
+  const { log } = opts;
   const warnings: string[] = [];
   const warn = (w: string) => { warnings.push(w); log(`WARNING: ${w}`); };
-  const name = `exodus-${slug}`;
   const owner = process.env.GITHUB_OWNER || '';
   if (!owner) throw new Error('GITHUB_OWNER must be set');
   const zone = (process.env.STATIC_HOSTING_CUSTOM_DOMAIN_ZONE || '').trim();
   const cfg = dhqConfigFromEnv();
+  // Versioned mode (default): every run gets a fresh repo, project and site named <slug>-vNNN,
+  // so earlier runs stay up as examples. EXODUS_VERSIONED=0 reuses exodus-<slug> and redeploys.
+  let version: string | null = null;
+  let slug = opts.slug;
+  if (versioningEnabled()) {
+    const names = asList(await dhq(cfg, 'GET', '/projects')).map((p) => String(p.name ?? ''));
+    // Match on the (possibly trimmed) base so long slugs still count up instead of colliding on v001.
+    const base = versionedName(opts.slug, 1).name.replace(/-v001$/, '');
+    ({ version, name: slug } = versionedName(base, nextVersion(base, names)));
+    log(`Versioned run: ${version}, name ${slug} (EXODUS_VERSIONED=0 to reuse exodus-${opts.slug})`);
+  }
+  const name = `exodus-${slug}`;
   const repoDir = resolve(opts.workDir, 'repo');
 
   // 1. build
@@ -268,5 +310,5 @@ export async function publish(opts: PublishOptions): Promise<PublishResult> {
     throw new Error(`${liveUrl} did not answer 200 within 2 minutes (last HTTP ${lastStatus})`);
   }, (u) => `200 ${u}`);
 
-  return { repoUrl, projectUrl, liveUrl, customDomainUrl, warnings };
+  return { repoUrl, projectUrl, liveUrl, customDomainUrl, warnings, version, name: slug };
 }
