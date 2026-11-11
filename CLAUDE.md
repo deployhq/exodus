@@ -25,11 +25,8 @@ Agencies and freelancers running many WordPress sites pay the "WordPress tax": s
   - `slug.ts` turns the URL into the site name.
 - **API (the UI calls only this):** `POST /api/jobs` `{url}` returns an id. `GET /api/jobs/[id]` returns the job, for polling. `GET /api/jobs/[id]/events` streams the job over SSE. Each step has a `phase` (`content`, `astro`, `deploy`) for the stepper. The full contract and snippets are in `docs/MIGRATION-SERVICE.md`.
 - **Naming:** `https://websitedemos.net/agency-02/` gives slug `websitedemos-agency-02`. The site is then `websitedemos-agency-02-staging.deployhq-sites.com`, with optional custom domain `websitedemos-agency-02.dropsite.dev`. The GitHub repo is `<GITHUB_OWNER>/exodus-<slug>` (private).
-- UI: a single page with a URL input, a stepper with live progress, and a result page with the staging link, a before/after comparison (page weight, load time, plugins removed) and a "claim this site" call to action.
-- **Planned (see "Account creation", not built yet):**
-  - After `publish`, the pipeline pauses for the visitor to create their DeployHQ account. Then `deploy(repoUrl, credentials)` runs as the visitor's own account, using the credentials returned by signup, instead of the demo's shared `thiago-qa` key.
-  - The stepper then pauses at the account step.
-  - Any Exodus-level credentials (bot, git host) come from env vars only, never committed.
+- UI (built part): a single page with a URL input and a stepper with live progress. Still to build: the account step, and a result page with the staging link and a before/after comparison (page weight, load time, plugins removed).
+- **Planned, not built** (see "Account creation"): after the translation and publish steps, the pipeline pauses for the visitor to create their DeployHQ account, then deploys as that account. `deployhq.ts` then acts as the visitor's own account, using the credentials returned by signup, instead of a shared staging account. Any Exodus-level credentials (bot, git host) come from env vars only, never committed.
 
 ## Guardrails (required, public tool)
 
@@ -93,30 +90,11 @@ Source: `exodus-landing-copy.md` (internal marketing draft, 2026-11-11, outside 
 - `/sitemap.xml` lists indexable pages only: add new public pages to `paths` in `src/pages/sitemap.xml.ts`. `robots.txt` disallows `/api/`.
 - Generated preview sites must never be indexed. `src/lib/seo/noindex.ts` provides `injectNoindex(html)` and `PREVIEW_ROBOTS_TXT`. **Not wired in yet**: the publish step must apply both to the generated site's files before the git push (inject into every HTML file, write `robots.txt` at the site root). Tests: `node --test test/noindex.test.ts`.
 
-## Landing page copy rules
-
-Source: `exodus-landing-copy.md` (internal marketing draft, 2026-11-11, outside this repo). Rules that apply to anything user-facing here:
-
-- Do NOT claim custom domains, redirects, form handling, or "go live on your own domain" until they ship. This also means the result page must not offer a custom-domain step yet.
-- Do not publish unverified claims. The draft marks them **[verify]**; they are left out of the page until confirmed: same URLs, optimized images, repo export, `noindex`/unlisted previews, preview expiry (`[X days]`), read-only crawl guarantee.
-- Do not name or quote the author of the reference tweet in public copy.
-- Tone: second person, semi-formal, contractions OK. Avoid "simply", "just", "easy", "seamless", "leverage", "robust".
-- GA4 events: `exodus_url_submitted`, `exodus_preview_ready`, `exodus_preview_opened`, `exodus_preview_shared`, `exodus_signup_clicked`. Only the first is wired (in `UrlForm.astro`, via `window.gtag`).
-- `FAQPage` structured data only if the FAQ is visible with answers (the FAQ is not on the page yet). No `llms.txt` or AI-specific markup.
-- The public name "Exodus" is a working name; the title should keep "WordPress to Astro" for SEO.
-
-## SEO
-
-- `src/components/Seo.astro` renders title, description, robots, canonical and Open Graph/Twitter tags. Every page uses it; pass `noindex` for anything that isn't the landing page.
-- Canonical URLs, `robots.txt` and `sitemap.xml` need `SITE_URL` (public origin) at build time. Without it, canonical and sitemap entries are omitted.
-- `/sitemap.xml` lists indexable pages only: add new public pages to `paths` in `src/pages/sitemap.xml.ts`. `robots.txt` disallows `/api/`.
-- Generated preview sites must never be indexed. `src/lib/seo/noindex.ts` provides `injectNoindex(html)` and `PREVIEW_ROBOTS_TXT`. **Not wired in yet**: the publish step must apply both to the generated site's files before the git push (inject into every HTML file, write `robots.txt` at the site root). Tests: `node --test test/noindex.test.ts`.
-
 ## Open items (blocked on the team)
 
 - ~~Translator package~~: decided. `hackathon-wp-static`, installed from GitHub and run as a child process (see Architecture).
 - Git host: for the demo, one private repo per site under `GITHUB_OWNER`, using a personal `gh` token. Still open: a bot credential, a dedicated org and a cleanup policy.
-- ~~Staging account~~: decided. `thiago-qa` on staging; credentials in a local `.env` only (ask Thiago).
+- Staging account: for the hackathon demo, `thiago-qa` on staging, with credentials in a local `.env` only (ask Thiago). The planned flow replaces it with accounts created for visitors (see "Account creation").
 - Ownership proof (DNS TXT or meta tag) before a preview is publicly reachable, versus only the WordPress check. Decide before launch.
 - Preview hardening: `noindex`, unlisted, short-lived, "preview, not the original site" banner. Needs the expiry value and a place to apply it (translator output or hosting).
 - FAQ answers (cost, client sites, Elementor/Divi, SEO) and a GA4 measurement ID.
