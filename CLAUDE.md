@@ -58,6 +58,25 @@ Agencies and freelancers running many WordPress sites pay the "WordPress tax": s
 - ~~Staging account~~: decided. `thiago-qa` on staging; credentials in a local `.env` only (ask Thiago).
 - Staging site lifetime and how a "claim" hands the project over to a user's DeployHQ account.
 
+## Planned, not built: the "what didn't migrate" report
+
+The customer should see what didn't carry over before they claim a site. Nothing in the API or UI shows this today: the job result only has local file paths (`result.reports`). The engine already records the raw data in `<engineDir>/runs/<siteId>/`:
+- **`scan.json` → `features`:** things that break on a static site, each with `type`, `detail`, `pages`, `impact` and `suggestion`. For example, forms, LatePoint booking, search, comments, and plugins that need `admin-ajax.php`.
+- **`translate-report.json`:** `notTranslated`, `deviations` (each with a reason) and `resolvedFeatures`.
+- **`verify-translation/report.json`:** per-page visual %, plus text and structure checks.
+
+To build:
+- Read those files in `pipeline.ts`.
+- Add a customer-facing `job.result.report`: what works, what doesn't and why, and the suggested replacement.
+- Return it from `GET /api/jobs/[id]`, and show it on the result page next to the "claim this site" call to action.
+
+Also missing: the **old-to-new URL map and redirects**. The site keeps the original's paths today. Redirects need the Static Hosting redirects feature, and the WordPress REST API (`/wp-json/wp/v2/pages|posts`) gives the full page inventory to check against the crawl.
+
+## Known issue: redirect "flash" on demo sites
+- **The root redirect page:** a site that lived under a subpath (`/agency-02/`) is published as-is, so `publish.ts` writes a meta-refresh page at `/`, which the visitor sees as a flash.
+- **The trailing-slash redirect:** Static Hosting 301s every URL that ends in `/` to the same URL without the slash, adding `?__dhq_hops=1`. That's its loop guard, documented in the deployhq-sites repo, `docs/architecture.md`. WordPress links all end in `/`.
+- **Fix on our side:** have the translator emit the site at `/` and write internal links without a trailing slash.
+
 ## Conventions
 
 - Node 24.12.0 (see `.nvmrc`; Astro 7 needs 22.23.4 or newer), npm, TypeScript. Server code in `src/lib/migration/` must also run under plain `node` type stripping: no enums, use `import type`, and import local files with explicit `.ts` extensions.
