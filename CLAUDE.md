@@ -63,6 +63,13 @@ Source: `exodus-landing-copy.md` (internal marketing draft, 2026-11-11, outside 
 - `FAQPage` structured data only if the FAQ is visible with answers (the FAQ is not on the page yet). No `llms.txt` or AI-specific markup.
 - The public name "Exodus" is a working name; the title should keep "WordPress to Astro" for SEO.
 
+## SEO
+
+- `src/components/Seo.astro` renders title, description, robots, canonical and Open Graph/Twitter tags. Every page uses it; pass `noindex` for anything that isn't the landing page.
+- Canonical URLs, `robots.txt` and `sitemap.xml` need `SITE_URL` (public origin) at build time. Without it, canonical and sitemap entries are omitted.
+- `/sitemap.xml` lists indexable pages only: add new public pages to `paths` in `src/pages/sitemap.xml.ts`. `robots.txt` disallows `/api/`.
+- Generated preview sites must never be indexed. `src/lib/seo/noindex.ts` provides `injectNoindex(html)` and `PREVIEW_ROBOTS_TXT`. **Not wired in yet**: the publish step must apply both to the generated site's files before the git push (inject into every HTML file, write `robots.txt` at the site root). Tests: `node --test test/noindex.test.ts`.
+
 ## Open items (blocked on the team)
 
 - ~~Translator package~~: decided. `hackathon-wp-static`, installed from GitHub and run as a child process (see Architecture).
@@ -92,6 +99,14 @@ Also missing: the **old-to-new URL map and redirects**. The site keeps the origi
 - **The root redirect page:** a site that lived under a subpath (`/agency-02/`) is published as-is, so `publish.ts` writes a meta-refresh page at `/`, which the visitor sees as a flash.
 - **The trailing-slash redirect:** Static Hosting 301s every URL that ends in `/` to the same URL without the slash, adding `?__dhq_hops=1`. That's its loop guard, documented in the deployhq-sites repo, `docs/architecture.md`. WordPress links all end in `/`.
 - **Fix on our side:** have the translator emit the site at `/` and write internal links without a trailing slash.
+
+## Verification is off by default (EXODUS_VERIFY)
+
+- The engine's verifier proves the copy is pixel-identical to the original and that the Astro version is at least 95% similar, page by page.
+- It re-captures the live original at 3 viewports, politely rate-limited, so it takes more than 10 minutes even for a small site. That is too slow for a live demo or an interactive funnel.
+- So the service skips it by default (`EXODUS_VERIFY=off` passes `--skip-verify` to the engine); a fresh run then takes about 2-3 minutes end to end.
+- Set `EXODUS_VERIFY=full` to get the per-page proof (the report paths in `job.result.reports` then exist), for example when validating a new site or before a customer claims it.
+- Follow-up idea: run verification asynchronously after the site is live and attach the report to the job.
 
 ## Conventions
 

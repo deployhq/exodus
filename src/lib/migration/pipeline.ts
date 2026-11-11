@@ -115,7 +115,8 @@ async function runJob(store: JobStore, job: Job, o: PipelineOverrides): Promise<
       repoUrl: res.repoUrl,
       projectUrl: res.projectUrl,
       reports: {
-        verifyTranslation: reportPath('verify-translation/report.html'),
+        // A skipped verify (EXODUS_VERIFY=off) must not surface a stale report from an earlier run.
+        verifyTranslation: eng.summary?.stages?.translation?.verify?.skipped ? null : reportPath('verify-translation/report.html'),
         astroQuality: reportPath('astro-quality.md'),
       },
     };

@@ -104,6 +104,12 @@ export async function runEngine(opts: EngineOptions): Promise<EngineResult> {
     args.push('--skip-scan', '--skip-copy');
     log(`engine: reusing cached crawl in ${runDir}`);
   }
+  // EXODUS_VERIFY=off (default) skips the engine's copy-verify and translation-verify stages:
+  // they re-capture the live original at 3 viewports and take 10+ minutes, too slow for a demo
+  // or an interactive funnel. EXODUS_VERIFY=full runs them (per-page proof, see CLAUDE.md).
+  const verifyMode = (process.env.EXODUS_VERIFY || 'off').trim().toLowerCase() === 'full' ? 'full' : 'off';
+  if (verifyMode === 'off') args.push('--skip-verify');
+  log(`engine: verification ${verifyMode === 'off' ? 'off (EXODUS_VERIFY=off, the default; set EXODUS_VERIFY=full for the per-page proof)' : 'full (EXODUS_VERIFY=full: strict copy verify + translation verify)'}`);
 
   // Same PATH shape as <engineDir>/tools/run.sh: this Node first, then the engine's .bin.
   // The installed dependency has its deps hoisted, so also add the parent node_modules/.bin.
@@ -156,7 +162,11 @@ export async function runEngine(opts: EngineOptions): Promise<EngineResult> {
   if (!built || !fs.existsSync(path.join(astroSrcDir, 'package.json'))) {
     throw new Error(`engine did not build the Astro translation (exit ${code})${t?.error ? `: ${t.error}` : t?.skipped ? `: skipped (${t.skipped})` : ''}`);
   }
-  if (code !== 0) warnings.push(`engine exited ${code}: the strict copy-verify stage did not pass (the Astro translation built fine)`);
+  // With verification off, the engine exits 0 when the translation built; a non-zero exit there
+  // means something else went wrong, so only blame the strict verify when it actually ran.
+  const verifyRan = !summary?.stages?.verify?.skipped;
+  if (code !== 0 && verifyRan) warnings.push(`engine exited ${code}: the strict copy-verify stage did not pass (the Astro translation built fine)`);
+  else if (code !== 0) warnings.push(`engine exited ${code} with verification off (the Astro translation built fine)`);
   if (t.error) warnings.push(`translation stage: ${t.error}`);
   if (t.quality?.verdict && t.quality.verdict !== 'pass') warnings.push(`Astro quality gate: ${t.quality.verdict}`);
   if (t.buildWarnings?.length) warnings.push(`Astro build warnings: ${t.buildWarnings.length}`);
