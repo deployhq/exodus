@@ -9,9 +9,13 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "migrate": "node scripts/migrate.ts",
+    "test": "node --test \"test/*.test.ts\""
   },
   "dependencies": {
-    "astro": "^7.4.10"
+    "@astrojs/node": "^11.1.12",
+    "astro": "^7.4.10",
+    "hackathon-wp-static": "github:deployhq/hackathon-wp-static#adf06ac77e396c0b3c1135e83478067996d2e839"
   }
 }

@@ -22,6 +22,8 @@ const { id } = Astro.props;
 </form>
 
 <script>
+	import { submitErrorMessage } from '../lib/ui/progress.ts';
+
 	declare global {
 		interface Window {
 			gtag?: (...args: unknown[]) => void;
@@ -43,9 +45,31 @@ const { id } = Astro.props;
 		}
 	}
 
+	// POST /api/jobs; resolves with the job id, rejects with visitor-facing copy (never the
+	// server's own error text, which is written for operators).
+	async function start(url: string): Promise<string> {
+		let res: Response;
+		try {
+			res = await fetch('/api/jobs', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ url }),
+			});
+		} catch {
+			throw 'We couldn’t reach Exodus. Check your connection and try again.';
+		}
+		if (!res.ok) throw submitErrorMessage(res.status);
+		const body = await res.json().catch(() => null);
+		if (!body?.id) throw submitErrorMessage(500);
+		return body.id;
+	}
+
 	document.querySelectorAll<HTMLFormElement>('[data-exodus-form]').forEach((form) => {
 		const input = form.querySelector('input')!;
 		const status = form.querySelector<HTMLElement>('.url-form-status')!;
+		const button = form.querySelector('button')!;
+		// Back/forward cache can restore the page with the button still disabled.
+		window.addEventListener('pageshow', () => (button.disabled = false));
 
 		form.addEventListener('submit', (event) => {
 			event.preventDefault();
@@ -61,9 +85,16 @@ const { id } = Astro.props;
 			input.removeAttribute('aria-invalid');
 			track('exodus_url_submitted', { hostname: url.hostname });
 
-			// TODO: POST to /api/jobs once the pipeline exists, then follow the SSE progress.
-			status.textContent = 'Preview builds are not connected yet.';
-			status.hidden = false;
+			status.hidden = true;
+			button.disabled = true;
+			start(url.href)
+				.then((id) => location.assign(`/migration?id=${encodeURIComponent(id)}`))
+				.catch((message: string) => {
+					status.textContent = message;
+					status.hidden = false;
+					input.setAttribute('aria-invalid', 'true');
+					button.disabled = false;
+				});
 		});
 	});
 </script>
