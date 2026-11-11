@@ -25,7 +25,7 @@ Consult these guides before working on related tasks:
 
 The UI only calls this HTTP API; never call DeployHQ or GitHub from the browser. Full guide with example JSON and snippets: `docs/MIGRATION-SERVICE.md`.
 
-- Setup: `nvm use` (Node 24.12.0), `npm install` (needs access to the private deployhq/hackathon-wp-static), `cp .env.example .env` (ask Thiago for the staging credentials; never commit `.env`), `npm run dev`.
+- Setup: `nvm use` (Node 24.12.0), `npm install` (needs access to the private deployhq/hackathon-wp-static), `cp .env.example .env` (ask the team for the staging credentials; never commit `.env`), `npm run dev`.
 - `POST /api/jobs` `{url}` -> `202 {id, statusUrl, eventsUrl, job}`; `400 {error}` for a bad URL, `422 {error}` for a host outside the allowlist.
 - `GET /api/jobs/:id/events` -> SSE: `event: job` with the full job JSON on every change; the stream closes when the job is `succeeded` or `failed`; `: ping` every 15 s. Preferred.
 - `GET /api/jobs/:id` -> the job (poll every 2 s as a fallback); `404 {error}` if unknown. `GET /api/jobs` -> all jobs, newest first.

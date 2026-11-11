@@ -13,7 +13,7 @@ The UI only talks to the HTTP API below. Everything else runs on the server.
 ```sh
 nvm use                      # .nvmrc pins Node 24.12.0; Astro 7 needs >= 22.23.4
 npm install                  # needs GitHub access to the private deployhq/hackathon-wp-static
-cp .env.example .env         # then ask Thiago for the staging credentials. Never commit .env
+cp .env.example .env         # then ask the team for the staging credentials. Never commit .env
 npm run dev                  # http://localhost:4321
 ```
 

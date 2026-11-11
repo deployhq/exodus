@@ -73,7 +73,7 @@ Verify against staging before building:
 
 ## Landing page copy rules
 
-Source: `exodus-landing-copy.md` (internal marketing draft, 2026-11-11, outside this repo). Rules that apply to anything user-facing here:
+Source: the approved landing copy (marketing draft, 2026-11-11, not in this repo). Rules that apply to anything user-facing here:
 
 - Do NOT claim custom domains, redirects, form handling, or "go live on your own domain" until they ship. This also means the result page must not offer a custom-domain step yet.
 - Do not publish unverified claims. The draft marks them **[verify]**; they are left out of the page until confirmed: same URLs, optimized images, repo export, `noindex`/unlisted previews, preview expiry (`[X days]`), read-only crawl guarantee.
@@ -94,7 +94,7 @@ Source: `exodus-landing-copy.md` (internal marketing draft, 2026-11-11, outside 
 
 - ~~Translator package~~: decided. `hackathon-wp-static`, installed from GitHub and run as a child process (see Architecture).
 - Git host: for the demo, one private repo per site under `GITHUB_OWNER`, using a personal `gh` token. Still open: a bot credential, a dedicated org and a cleanup policy.
-- Staging account: for the hackathon demo, `thiago-qa` on staging, with credentials in a local `.env` only (ask Thiago). The planned flow replaces it with accounts created for visitors (see "Account creation").
+- Staging account: for the hackathon demo, a shared QA account on staging, with credentials in a local `.env` only (ask the team). The planned flow replaces it with accounts created for visitors (see "Account creation").
 - Ownership proof (DNS TXT or meta tag) before a preview is publicly reachable, versus only the WordPress check. Decide before launch.
 - Preview hardening: `noindex`, unlisted, short-lived, "preview, not the original site" banner. Needs the expiry value and a place to apply it (translator output or hosting).
 - FAQ answers (cost, client sites, Elementor/Divi, SEO) and a GA4 measurement ID.
