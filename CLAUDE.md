@@ -55,6 +55,13 @@ Source: `exodus-landing-copy.md` (internal marketing draft, 2026-11-11, outside 
 - `FAQPage` structured data only if the FAQ is visible with answers (the FAQ is not on the page yet). No `llms.txt` or AI-specific markup.
 - The public name "Exodus" is a working name; the title should keep "WordPress to Astro" for SEO.
 
+## SEO
+
+- `src/components/Seo.astro` renders title, description, robots, canonical and Open Graph/Twitter tags. Every page uses it; pass `noindex` for anything that isn't the landing page.
+- Canonical URLs, `robots.txt` and `sitemap.xml` need `SITE_URL` (public origin) at build time. Without it, canonical and sitemap entries are omitted.
+- `/sitemap.xml` lists indexable pages only: add new public pages to `paths` in `src/pages/sitemap.xml.ts`. `robots.txt` disallows `/api/`.
+- Generated preview sites must never be indexed. `src/lib/seo/noindex.ts` provides `injectNoindex(html)` and `PREVIEW_ROBOTS_TXT`. **Not wired in yet**: the publish step must apply both to the generated site's files before the git push (inject into every HTML file, write `robots.txt` at the site root). Tests: `node --test test/noindex.test.ts`.
+
 ## Open items (blocked on the team)
 
 - Ownership proof (DNS TXT or meta tag) before a preview is publicly reachable, versus only the WordPress check. Decide before launch.
