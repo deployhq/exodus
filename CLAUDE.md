@@ -43,7 +43,24 @@ Agencies and freelancers running many WordPress sites pay the "WordPress tax": s
 - `POST /detection` can detect the framework and suggest the static-hosting output directory (Astro: `dist`) and build commands.
 - Open API details to verify against a real staging account: the exact `hosted_website` response shape (where the public URL lives) and the `subdomain` rules.
 
+## Landing page copy rules
+
+Source: `exodus-landing-copy.md` (internal marketing draft, 2026-11-11, outside this repo). Rules that apply to anything user-facing here:
+
+- Do NOT claim custom domains, redirects, form handling, or "go live on your own domain" until they ship. This also means the result page must not offer a custom-domain step yet; "claim" leads to signup only.
+- Do not publish unverified claims. The draft marks them **[verify]**; they are left out of the page until confirmed: same URLs, optimized images, repo export, `noindex`/unlisted previews, preview expiry (`[X days]`), read-only crawl guarantee.
+- Do not name or quote the author of the reference tweet in public copy.
+- Tone: second person, semi-formal, contractions OK. Avoid "simply", "just", "easy", "seamless", "leverage", "robust".
+- GA4 events: `exodus_url_submitted`, `exodus_preview_ready`, `exodus_preview_opened`, `exodus_preview_shared`, `exodus_signup_clicked`. Only the first is wired (in `UrlForm.astro`, via `window.gtag`).
+- `FAQPage` structured data only if the FAQ is visible with answers (the FAQ is not on the page yet). No `llms.txt` or AI-specific markup.
+- The public name "Exodus" is a working name; the title should keep "WordPress to Astro" for SEO.
+
 ## Open items (blocked on the team)
+
+- Ownership proof (DNS TXT or meta tag) before a preview is publicly reachable, versus only the WordPress check. Decide before launch.
+- Preview hardening: `noindex`, unlisted, short-lived, "preview, not the original site" banner. Needs the expiry value and a place to apply it (translator output or hosting).
+- FAQ answers (cost, client sites, Elementor/Divi, SEO) and a GA4 measurement ID.
+- Canonical URL and final domain for this site (the draft's `www.deployhq.com` convention applies to the marketing site, not necessarily to this app).
 
 - Translator package: name, install method, entry-point signature.
 - Git host for generated sites: the translator output must be pushed to a repo DeployHQ can reach (e.g. one repo per demo in a dedicated GitHub org, or a repo with a branch per demo). Needs a decision, a bot credential, and a cleanup policy.

@@ -1,0 +1,69 @@
+---
+interface Props {
+	id: string;
+}
+
+const { id } = Astro.props;
+---
+
+<form class="url-form" data-exodus-form novalidate>
+	<label for={id} class="visually-hidden">Your WordPress site URL</label>
+	<input
+		id={id}
+		name="url"
+		type="url"
+		inputmode="url"
+		autocomplete="url"
+		placeholder="https://yoursite.com"
+		required
+	/>
+	<button type="submit">Build my preview</button>
+	<p class="url-form-status" role="status" aria-live="polite" hidden></p>
+</form>
+
+<script>
+	declare global {
+		interface Window {
+			gtag?: (...args: unknown[]) => void;
+		}
+	}
+
+	function track(event: string, params: Record<string, unknown> = {}) {
+		window.gtag?.('event', event, params);
+	}
+
+	function normalize(raw: string): URL | null {
+		const value = raw.trim();
+		if (!value) return null;
+		try {
+			const url = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`);
+			return url.hostname.includes('.') ? url : null;
+		} catch {
+			return null;
+		}
+	}
+
+	document.querySelectorAll<HTMLFormElement>('[data-exodus-form]').forEach((form) => {
+		const input = form.querySelector('input')!;
+		const status = form.querySelector<HTMLElement>('.url-form-status')!;
+
+		form.addEventListener('submit', (event) => {
+			event.preventDefault();
+			const url = normalize(input.value);
+
+			if (!url) {
+				status.textContent = 'Enter a full site address, like https://yoursite.com.';
+				status.hidden = false;
+				input.setAttribute('aria-invalid', 'true');
+				return;
+			}
+
+			input.removeAttribute('aria-invalid');
+			track('exodus_url_submitted', { hostname: url.hostname });
+
+			// TODO: POST to /api/jobs once the pipeline exists, then follow the SSE progress.
+			status.textContent = 'Preview builds are not connected yet.';
+			status.hidden = false;
+		});
+	});
+</script>
