@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { commitAndPush, ensureDeployKey, ensureRepo, githubToken } from './github.ts';
-import { asList, dhq, dhqBase, dhqConfigFromEnv, DhqError } from './deployhq.ts';
+import { asList, dhq, dhqBase, dhqConfigFromEnv, DhqError, POLL_TIMEOUT_MS, retryPoll } from './deployhq.ts';
 import type { DhqConfig } from './deployhq.ts';
 
 export type PublishLog = (line: string) => void;
@@ -119,6 +119,30 @@ async function createServer(cfg: DhqConfig, p: string, body: unknown, log: Publi
       return dhq(cfg, 'POST', `/projects/${p}/servers`, body, 180_000);
     }
     throw e;
+  }
+}
+
+/**
+ * Poll a deployment until it completes, fails or the deadline passes. Transient errors on a single
+ * GET (timeout, network, 5xx, 429) are retried; only the overall deadline ends the wait.
+ */
+export async function waitForDeployment(
+  get: () => Promise<any>,
+  id: string,
+  initialStatus: string,
+  log: PublishLog,
+  { timeoutMs = 600_000, intervalMs = 3000, sleepFn = sleep }: { timeoutMs?: number; intervalMs?: number; sleepFn?: (ms: number) => Promise<void> } = {},
+): Promise<string> {
+  let last = initialStatus;
+  const deadline = Date.now() + timeoutMs;
+  while (true) {
+    if (last === 'completed') return id;
+    if (last === 'failed' || last === 'cancelled') throw new Error(`Deployment ${id} ${last}`);
+    if (Date.now() > deadline) throw new Error(`Deployment ${id} still ${last} after ${Math.round(timeoutMs / 60_000)} minutes`);
+    await sleepFn(intervalMs);
+    const d = await retryPoll('Deployment status poll', get, deadline, log, sleepFn);
+    if (d.status !== last) log(`Deployment status: ${last} -> ${d.status}`);
+    last = d.status;
   }
 }
 
@@ -242,7 +266,9 @@ export async function publish(opts: PublishOptions): Promise<PublishResult> {
     while (status === 'provisioning' || !srv.static_hosting?.url) {
       if (Date.now() > deadline) throw new Error(`Site still ${status} after 3 minutes`);
       await sleep(3000);
-      srv = await dhq(cfg, 'GET', `/projects/${p}/servers/${srv.identifier}`);
+      const sid = srv.identifier;
+      srv = await retryPoll('Site status poll', () =>
+        dhq(cfg, 'GET', `/projects/${p}/servers/${sid}`, undefined, POLL_TIMEOUT_MS), deadline, log);
       if (srv.static_hosting?.status !== status) log(`Site status: ${srv.static_hosting?.status}`);
       status = srv.static_hosting?.status;
     }
@@ -250,7 +276,9 @@ export async function publish(opts: PublishOptions): Promise<PublishResult> {
     let domains: any[] = Array.isArray(srv.custom_domains) ? srv.custom_domains : [];
     if (zone && !domains.length) {
       try {
-        domains = asList(await dhq(cfg, 'GET', `/projects/${p}/servers/${srv.identifier}/custom_domains`));
+        domains = asList(await retryPoll('Custom domains read', () =>
+          dhq(cfg, 'GET', `/projects/${p}/servers/${srv.identifier}/custom_domains`, undefined, POLL_TIMEOUT_MS),
+          Date.now() + 60_000, log));
       } catch (e: any) {
         warn(`Could not read custom domains: ${e?.message}`);
       }
@@ -282,17 +310,8 @@ export async function publish(opts: PublishOptions): Promise<PublishResult> {
     }, 120_000);
     const id = dep.identifier;
     log(`Deployment ${id} queued (${dep.status})`);
-    let last = dep.status;
-    const deadline = Date.now() + 600_000;
-    while (true) {
-      if (last === 'completed') return id;
-      if (last === 'failed' || last === 'cancelled') throw new Error(`Deployment ${id} ${last}`);
-      if (Date.now() > deadline) throw new Error(`Deployment ${id} still ${last} after 10 minutes`);
-      await sleep(3000);
-      const d = await dhq(cfg, 'GET', `/projects/${p}/deployments/${id}`);
-      if (d.status !== last) log(`Deployment status: ${last} -> ${d.status}`);
-      last = d.status;
-    }
+    return waitForDeployment(
+      () => dhq(cfg, 'GET', `/projects/${p}/deployments/${id}`, undefined, POLL_TIMEOUT_MS), id, dep.status, log);
   }, (id) => id);
 
   // 7. live

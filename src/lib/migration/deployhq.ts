@@ -50,3 +50,41 @@ export function asList(data: any): any[] {
   if (data && Array.isArray(data.records)) return data.records;
   return [];
 }
+
+/** Per-request timeout for poll GETs: short, so a hung request is retried instead of eating a minute. */
+export const POLL_TIMEOUT_MS = 20_000;
+const POLL_BACKOFF_MS = [3_000, 6_000, 10_000];
+
+/** Timeouts/aborts, network errors, HTTP 5xx and 429 are worth retrying; other 4xx are not. */
+export function isTransientError(e: any): boolean {
+  if (e instanceof DhqError) return e.status === 429 || e.status >= 500;
+  const name = e?.name ?? '';
+  if (name === 'TimeoutError' || name === 'AbortError') return true;
+  // fetch() network failures surface as TypeError("fetch failed") with a cause.
+  if (e instanceof TypeError) return true;
+  return false;
+}
+
+/**
+ * Run a read-only poll request, retrying transient failures with backoff (3s, 6s, 10s, 10s...)
+ * until `deadline` (epoch ms) passes. Never use it for POSTs: a retry could duplicate a resource.
+ */
+export async function retryPoll<T>(
+  what: string,
+  fn: () => Promise<T>,
+  deadline: number,
+  log: (line: string) => void,
+  sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
+): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fn();
+    } catch (e: any) {
+      if (!isTransientError(e)) throw e;
+      const wait = POLL_BACKOFF_MS[Math.min(attempt, POLL_BACKOFF_MS.length - 1)];
+      if (Date.now() + wait > deadline) throw e;
+      log(`${what}: transient error (${e?.message ?? e}); retrying in ${wait / 1000}s`);
+      await sleep(wait);
+    }
+  }
+}
