@@ -9,7 +9,9 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "migrate": "node scripts/migrate.ts",
+    "test": "node --test \"test/*.test.ts\""
   },
   "dependencies": {
     "@astrojs/node": "^11.1.12",
