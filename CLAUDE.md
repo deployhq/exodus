@@ -77,6 +77,14 @@ Also missing: the **old-to-new URL map and redirects**. The site keeps the origi
 - **The trailing-slash redirect:** Static Hosting 301s every URL that ends in `/` to the same URL without the slash, adding `?__dhq_hops=1`. That's its loop guard, documented in the deployhq-sites repo, `docs/architecture.md`. WordPress links all end in `/`.
 - **Fix on our side:** have the translator emit the site at `/` and write internal links without a trailing slash.
 
+## Verification is off by default (EXODUS_VERIFY)
+
+- The engine's verifier proves the copy is pixel-identical to the original and that the Astro version is at least 95% similar, page by page.
+- It re-captures the live original at 3 viewports, politely rate-limited, so it takes more than 10 minutes even for a small site. That is too slow for a live demo or an interactive funnel.
+- So the service skips it by default (`EXODUS_VERIFY=off` passes `--skip-verify` to the engine); a fresh run then takes about 2-3 minutes end to end.
+- Set `EXODUS_VERIFY=full` to get the per-page proof (the report paths in `job.result.reports` then exist), for example when validating a new site or before a customer claims it.
+- Follow-up idea: run verification asynchronously after the site is live and attach the report to the job.
+
 ## Conventions
 
 - Node 24.12.0 (see `.nvmrc`; Astro 7 needs 22.23.4 or newer), npm, TypeScript. Server code in `src/lib/migration/` must also run under plain `node` type stripping: no enums, use `import type`, and import local files with explicit `.ts` extensions.

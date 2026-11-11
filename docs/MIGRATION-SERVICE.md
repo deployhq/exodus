@@ -32,7 +32,8 @@ cd node_modules/hackathon-wp-static && npx playwright install chromium
 | `GITHUB_TOKEN` | Optional; falls back to `gh auth token` |
 | `STATIC_HOSTING_CUSTOM_DOMAIN_ZONE` | Optional zone for `<slug>.<zone>` (e.g. `dropsite.dev`) |
 | `EXODUS_ENGINE_DIR` | Optional path to a local engine checkout (default: the installed dependency) |
-| `EXODUS_ENGINE_REUSE` | `1` reuses a cached crawl (`--skip-scan --skip-copy`): about 3 min instead of about 15 |
+| `EXODUS_VERIFY` | `off` (default) passes `--skip-verify` to the engine: a fresh run takes about 2-3 min end to end. `full` runs the per-page copy verify and translation verify: about 15 min. See "Verification" below |
+| `EXODUS_ENGINE_REUSE` | `1` reuses a cached crawl (`--skip-scan --skip-copy`), saving the scan and copy (about 2 min fresh) |
 | `WP_STATIC_ALLOW_HOSTS` | Extra hosts the engine may crawl, comma-separated |
 
 Only these hosts are accepted by default: `websitedemos.net`, `wptavern.com`, `www.addsearch.com` (exact hostname match: `addsearch.com` is not `www.addsearch.com`). Add others with `WP_STATIC_ALLOW_HOSTS` and restart the server.
@@ -126,6 +127,16 @@ data: {"id":"3f9c1a2b7d4e","status":"running", ... }
 }
 ```
 
+`reports.verifyTranslation` is `null` unless the job ran with `EXODUS_VERIFY=full` (verification is off by default).
+
+## Verification (`EXODUS_VERIFY`)
+
+The engine's verifier proves, page by page, that the copy is pixel-identical to the original and that the Astro version is at least 95% similar. To do that it re-captures the live original at 3 viewports, politely rate-limited, which takes more than 10 minutes even for a 6-page site (measured: strict verify about 690 s, versus about 2 minutes for scan, copy, translate, build and quality gate together). That is too slow for a live demo or an interactive funnel, so the service skips it by default (`EXODUS_VERIFY=off`, which passes `--skip-verify` to `bin/run.mjs`).
+
+- Fresh runs: about 2-3 min end to end with the default, about 15 min with `EXODUS_VERIFY=full`.
+- Set `EXODUS_VERIFY=full` when you want the per-page proof, e.g. when validating a new site or before a customer claims it. The report paths in `job.result.reports` then exist.
+- The job log says which mode was used (`engine: verification off ...` / `engine: verification full ...`).
+
 `customDomainUrl` may be `null`. `reports` are server-side file paths (for the demo operator), not URLs. Always use the URLs from `result`; the patterns are `<slug>-staging.deployhq-sites.com` and optionally `<slug>.dropsite.dev`.
 
 ### Steps and phases (for the loader / stepper)
@@ -201,13 +212,13 @@ EXODUS_VERBOSE=1 npm run migrate -- <url>                # also streams the engi
 npm test                                                 # unit tests (fake engine and fake publish)
 ```
 
-## Demo shortcut (cached runs, about 3 minutes)
+## Demo shortcut (cached runs)
 
 ```sh
 EXODUS_ENGINE_DIR=/path/to/hackathon-wp-static EXODUS_ENGINE_REUSE=1 npm run dev
 ```
 
-With `EXODUS_ENGINE_REUSE=1`, if the engine already has `runs/<siteId>/site/` for that URL, it skips the scan and copy and only re-verifies, translates and builds.
+With `EXODUS_ENGINE_REUSE=1`, if the engine already has `runs/<siteId>/site/` for that URL, it skips the scan and copy and only translates and builds (and re-verifies with `EXODUS_VERIFY=full`). Fresh runs are already about 2-3 minutes with verification off, so this is mostly useful with `EXODUS_VERIFY=full`.
 
 Note: the engine always writes its output to `<engine dir>/runs/<siteId>/` (not under `.exodus/`). The service keeps its own state in `.exodus/` (gitignored): `.exodus/jobs/<id>.json` for jobs and `.exodus/work/<id>/` for publish.
 

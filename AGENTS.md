@@ -31,5 +31,6 @@ The UI only calls this HTTP API; never call DeployHQ or GitHub from the browser.
 - `GET /api/jobs/:id` -> the job (poll every 2 s as a fallback); `404 {error}` if unknown. `GET /api/jobs` -> all jobs, newest first.
 - Job: `status` (`queued|running|succeeded|failed`), `steps[]` (`name`, `label`, `phase`, `status`, `detail`), `result` (`liveUrl`, `customDomainUrl`, `repoUrl`, `projectUrl`, `reports`), `error`, `warnings`, `log`.
 - Phases for the stepper: `content` (Pulling content: `validate`, `extract`), `astro` (Rebuilding in Astro: `build`), `deploy` (Deploying: `github`, `project`, `repository`, `site`, `deploy`, `live`).
-- Durations: about 15 min fresh, about 3 min with a cached crawl (`EXODUS_ENGINE_DIR=<engine checkout> EXODUS_ENGINE_REUSE=1`), plus 2-4 min to deploy.
+- Durations: about 2-3 min end to end for a fresh run (verification off, the default). With `EXODUS_VERIFY=full` (per-page copy verify + translation verify) about 15 min fresh. `EXODUS_ENGINE_REUSE=1` (with `EXODUS_ENGINE_DIR=<engine checkout>`) also skips the scan and copy of a cached crawl.
+- Configuration: `EXODUS_VERIFY=off|full` (default `off`, passes `--skip-verify` to the engine; why: CLAUDE.md "Verification is off by default"). With `off`, `result.reports.verifyTranslation` is `null`.
 - One job runs at a time; the same slug while queued/running returns the existing job.
