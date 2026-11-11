@@ -38,6 +38,10 @@ cd node_modules/hackathon-wp-static && npx playwright install chromium
 
 Only these hosts are accepted by default: `websitedemos.net`, `wptavern.com`, `www.addsearch.com` (exact hostname match: `addsearch.com` is not `www.addsearch.com`). Add others with `WP_STATIC_ALLOW_HOSTS` and restart the server.
 
+## Versioned runs (`EXODUS_VERSIONED`)
+
+Every run creates a new versioned project; `EXODUS_VERSIONED=0` to reuse. With the default (`1`), publish lists the DeployHQ projects, takes the highest `exodus-<slug>-vNNN` and adds one (starting at `v001`), then creates repo `<owner>/exodus-<slug>-vNNN`, project `exodus-<slug>-vNNN` and site subdomain `<slug>-vNNN` (staging: `https://<slug>-vNNN-staging.deployhq-sites.com/`; custom domain `<slug>-vNNN.<zone>`). Earlier runs and the old unversioned `exodus-<slug>` resources are never touched. The slug is trimmed (never the version) to keep the name within the 40-character slug cap. `job.result.version` (e.g. `v001`) and `job.result.name` record what was created. Each run consumes one static hosting site, so the account's site limit caps how many versions can exist at once.
+
 ## API contract
 
 All responses are JSON unless noted. Errors are always `{ "error": "<message>" }`.

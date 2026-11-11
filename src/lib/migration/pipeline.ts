@@ -105,6 +105,7 @@ async function runJob(store: JobStore, job: Job, o: PipelineOverrides): Promise<
       },
     });
     job.warnings.push(...(res.warnings ?? []));
+    log(`Published ${res.name ?? job.slug} (version ${res.version ?? 'unversioned'})`);
     const reportPath = (rel: string) => {
       const f = path.join(eng.runDir, rel);
       return fs.existsSync(f) ? f : null;
@@ -114,6 +115,8 @@ async function runJob(store: JobStore, job: Job, o: PipelineOverrides): Promise<
       customDomainUrl: res.customDomainUrl,
       repoUrl: res.repoUrl,
       projectUrl: res.projectUrl,
+      version: res.version ?? null,
+      name: res.name ?? job.slug,
       reports: {
         // A skipped verify (EXODUS_VERIFY=off) must not surface a stale report from an earlier run.
         verifyTranslation: eng.summary?.stages?.translation?.verify?.skipped ? null : reportPath('verify-translation/report.html'),
